@@ -6,13 +6,13 @@
     <title>Ultimate Audio Volume Booster (up to 500%)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for sleek icons -->
+    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
+            background-color: #0b0f19;
             color: #f8fafc;
         }
 
@@ -25,7 +25,7 @@
         }
 
         input[type="range"]::-webkit-slider-runnable-track {
-            background: #334155;
+            background: #1e293b;
             height: 8px;
             border-radius: 4px;
         }
@@ -47,7 +47,7 @@
             background-color: #818cf8;
         }
 
-        /* Specialized boost slider glow based on level */
+        /* Boost slider dynamic color states */
         .boost-slider::-webkit-slider-thumb {
             background-color: #10b981;
         }
@@ -60,86 +60,112 @@
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.9);
         }
 
-        /* Pulse effect for drag overlay */
         .drag-over {
             border-color: #6366f1 !important;
             background-color: rgba(99, 102, 241, 0.1) !important;
         }
+
+        /* Custom scrollbar for playlist */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+<body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 md:p-8">
 
-    <div class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 backdrop-blur-xl">
+    <div class="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-5 sm:p-8 space-y-6 backdrop-blur-xl">
         
         <!-- Header -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-xl font-bold border border-indigo-500/30">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-2xl font-bold border border-indigo-500/30">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide text-white">Audio Booster</h1>
-                    <p class="text-xs text-slate-400">Boost MP3 volume up to 500%</p>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-wide text-white">Audio Booster Pro</h1>
+                    <p class="text-xs text-slate-400">Boost MP3 & Audio volume up to 500% (5.0x Gain)</p>
                 </div>
             </div>
-            <div id="file-info" class="hidden sm:block text-xs font-mono text-slate-400 truncate max-w-[200px]">
-                No file loaded
+            
+            <!-- Clipping Warning Indicator -->
+            <div id="clipping-badge" class="hidden flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-rose-950/80 text-rose-400 border border-rose-800/80 animate-pulse">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Clipping Risk</span>
             </div>
         </div>
 
+        <!-- File Upload Area -->
         <div id="drop-zone" class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer transition-all bg-slate-950/50 group">
-            <input type="file" id="audio-input" accept="audio/*" class="hidden">
+            <!-- Explicit file picker filters targeting strictly audio/MP3 formats -->
+            <input type="file" id="audio-input" accept="audio/*, .mp3, .wav, .m4a, .aac, .ogg, .flac" multiple class="hidden">
             <div class="flex flex-col items-center justify-center space-y-3">
-                <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-indigo-600/20 text-slate-400 group-hover:text-indigo-400 flex items-center justify-center text-xl transition-all">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-indigo-600/20 text-slate-400 group-hover:text-indigo-400 flex items-center justify-center text-xl transition-all border border-slate-700/50">
+                    <i class="fa-solid fa-file-audio"></i>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-200">
-                        <span class="text-indigo-400 font-semibold">Click to upload</span> or drag and drop
+                        <span class="text-indigo-400 font-semibold">Click to upload Audio</span> or drag & drop MP3s
                     </p>
-                    <p class="text-xs text-slate-500 mt-1">Supports MP3, WAV, AAC, OGG, FLAC</p>
+                    <p class="text-xs text-slate-500 mt-1">Accepts .mp3, .wav, .m4a, .aac, .ogg, .flac files</p>
                 </div>
             </div>
         </div>
 
-        <div class="relative bg-slate-950 rounded-2xl p-2 border border-slate-800/80 overflow-hidden group">
+        <!-- Audio Canvas Visualizer -->
+        <div class="relative bg-slate-950 rounded-2xl p-2 border border-slate-800/80 overflow-hidden">
             <canvas id="visualizer" class="w-full h-32 sm:h-40 rounded-xl block"></canvas>
-            <!-- Overlay Title on visualizer -->
-            <div class="absolute top-4 left-4 pointer-events-none">
-                <span id="track-name" class="text-xs font-medium text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800 backdrop-blur-sm">
-                    Select an audio file to start
+            
+            <!-- Track Info & Visualizer mode toggle -->
+            <div class="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none">
+                <span id="track-name" class="text-xs font-medium text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 backdrop-blur-md truncate max-w-[70%]">
+                    No track selected
                 </span>
+                <button id="viz-mode-btn" title="Toggle Visualizer Mode" class="pointer-events-auto text-xs bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-800 backdrop-blur-md transition">
+                    <i class="fa-solid fa-chart-simple mr-1"></i> <span id="viz-mode-label">Frequency</span>
+                </button>
             </div>
         </div>
 
-        <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-5 space-y-4">
+        <!-- Boost Control Panel -->
+        <div class="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <label for="boost-slider" class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                     <i class="fa-solid fa-volume-high text-indigo-400"></i>
-                    Volume Boost
+                    Volume Boost Level
                 </label>
                 <div class="flex items-center gap-2">
-                    <span id="boost-value" class="text-lg font-extrabold text-indigo-400 font-mono">100%</span>
+                    <span id="boost-value" class="text-xl font-extrabold text-indigo-400 font-mono">100%</span>
                     <span id="boost-status" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded text-emerald-400 bg-emerald-950/80 border border-emerald-800/50">
-                        Normal
+                        1.0x Gain
                     </span>
                 </div>
             </div>
 
-            <!-- Boost Slider -->
+            <!-- Volume Boost Slider (0% to 500%) -->
             <input type="range" id="boost-slider" min="0" max="500" value="100" class="boost-slider w-full">
 
             <div class="flex justify-between text-[11px] font-medium text-slate-500 px-1">
                 <span>0% (Mute)</span>
-                <span>100% (Standard)</span>
-                <span>250%</span>
-                <span class="text-amber-500">400%</span>
-                <span class="text-rose-500 font-bold">500% (Max)</span>
+                <span>100% (1.0x)</span>
+                <span>250% (2.5x)</span>
+                <span class="text-amber-500">400% (4.0x)</span>
+                <span class="text-rose-500 font-bold">500% (5.0x Max)</span>
             </div>
         </div>
 
+        <!-- Playback Controls -->
         <div class="space-y-4">
-            <!-- Timeline Seekbar & Timers -->
+            <!-- Seekbar & Display -->
             <div class="space-y-1">
                 <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1" class="w-full" disabled>
                 <div class="flex justify-between text-xs font-mono text-slate-400">
@@ -148,48 +174,62 @@
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex items-center justify-between pt-2">
-                <!-- Left Options (Loop) -->
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-1">
+                <!-- Loop Toggle -->
                 <button id="btn-loop" title="Toggle Loop" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 transition flex items-center justify-center">
                     <i class="fa-solid fa-repeat"></i>
                 </button>
 
-                <!-- Center Controls (Play/Pause, Rewind, Forward) -->
+                <!-- Center Controls -->
                 <div class="flex items-center space-x-3">
-                    <button id="btn-rewind" title="Rewind 5s" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center justify-center disabled:opacity-40" disabled>
+                    <button id="btn-prev" title="Previous Track" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center justify-center disabled:opacity-40" disabled>
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
 
-                    <button id="btn-play" title="Play/Pause" class="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition flex items-center justify-center text-xl disabled:opacity-40" disabled>
+                    <button id="btn-play" title="Play / Pause" class="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition flex items-center justify-center text-xl disabled:opacity-40" disabled>
                         <i class="fa-solid fa-play ml-0.5"></i>
                     </button>
 
-                    <button id="btn-forward" title="Forward 5s" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center justify-center disabled:opacity-40" disabled>
+                    <button id="btn-next" title="Next Track" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center justify-center disabled:opacity-40" disabled>
                         <i class="fa-solid fa-forward-step"></i>
                     </button>
                 </div>
 
-                <!-- Right Options (Mute Toggle) -->
-                <button id="btn-mute" title="Mute/Unmute" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 transition flex items-center justify-center">
+                <!-- Mute Toggle -->
+                <button id="btn-mute" title="Mute / Unmute" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 transition flex items-center justify-center">
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
             </div>
         </div>
+
+        <!-- Playlist Queue Section -->
+        <div class="border-t border-slate-800 pt-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-indigo-400"></i> Playlist Queue
+                </h2>
+                <button id="clear-playlist-btn" class="text-xs text-slate-500 hover:text-rose-400 transition">Clear Queue</button>
+            </div>
+            <ul id="playlist" class="max-h-36 overflow-y-auto space-y-1.5 pr-1 text-sm">
+                <li id="empty-playlist-msg" class="text-xs text-slate-500 text-center py-4 italic">No audio files uploaded yet. Drag or select files above.</li>
+            </ul>
+        </div>
     </div>
 
     <script>
-        // DOM Elements
         const dropZone = document.getElementById('drop-zone');
         const audioInput = document.getElementById('audio-input');
         const trackName = document.getElementById('track-name');
-        const fileInfo = document.getElementById('file-info');
+        const clippingBadge = document.getElementById('clipping-badge');
 
         const btnPlay = document.getElementById('btn-play');
-        const btnRewind = document.getElementById('btn-rewind');
-        const btnForward = document.getElementById('btn-forward');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
         const btnLoop = document.getElementById('btn-loop');
         const btnMute = document.getElementById('btn-mute');
+        const vizModeBtn = document.getElementById('viz-mode-btn');
+        const vizModeLabel = document.getElementById('viz-mode-label');
 
         const seekBar = document.getElementById('seek-bar');
         const currentTimeEl = document.getElementById('current-time');
@@ -199,20 +239,29 @@
         const boostValue = document.getElementById('boost-value');
         const boostStatus = document.getElementById('boost-status');
 
+        const playlistContainer = document.getElementById('playlist');
+        const emptyPlaylistMsg = document.getElementById('empty-playlist-msg');
+        const clearPlaylistBtn = document.getElementById('clear-playlist-btn');
+
         const canvas = document.getElementById('visualizer');
         const canvasCtx = canvas.getContext('2d');
 
-        // Audio State & Web Audio API
+        // Audio State variables
+        let playlist = [];
+        let currentTrackIndex = -1;
         let audio = new Audio();
+        
+        // Web Audio API components
         let audioCtx = null;
         let sourceNode = null;
         let gainNode = null;
         let analyserNode = null;
         let isAudioSetup = false;
+        
         let isMuted = false;
         let lastGainValue = 1.0;
+        let vizMode = 'frequency'; // 'frequency' or 'waveform'
 
-        // Initialize Canvas Dimensions dynamically
         function resizeCanvas() {
             canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
             canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
@@ -223,80 +272,177 @@
         function setupWebAudio() {
             if (isAudioSetup) return;
 
-            // Handle Web Audio API Cross-Browser Context Initialization
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AudioContext();
 
-            // Create Nodes
+            // Create Audio Pipeline Nodes
             sourceNode = audioCtx.createMediaElementSource(audio);
             gainNode = audioCtx.createGain();
             analyserNode = audioCtx.createAnalyser();
 
-            // Configure Analyser
-            analyserNode.fftSize = 128;
+            analyserNode.fftSize = 256;
 
-            // Connect nodes: Source -> Gain (Volume/Boost) -> Analyser -> Output
+            // Connect Pipeline: Audio Element -> GainNode (0% to 500% volume) -> AnalyserNode -> Destination
             sourceNode.connect(gainNode);
             gainNode.connect(analyserNode);
             analyserNode.connect(audioCtx.destination);
+
+            // Apply current slider value to gain
+            const boostPercent = parseInt(boostSlider.value, 10);
+            gainNode.gain.value = boostPercent / 100;
 
             isAudioSetup = true;
             drawVisualizer();
         }
 
-        function handleFile(file) {
-            if (!file || !file.type.startsWith('audio/')) {
-                alert('Please upload a valid audio file (e.g., MP3, WAV).');
+        function handleFiles(files) {
+            const validAudioFiles = Array.from(files).filter(file => file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name));
+
+            if (validAudioFiles.length === 0) {
+                alert('Please select valid audio files (.mp3, .wav, .m4a, .aac, .ogg, .flac).');
                 return;
             }
 
-            const objectUrl = URL.createObjectURL(file);
-            audio.src = objectUrl;
+            const startIndex = playlist.length;
+            validAudioFiles.forEach(file => {
+                playlist.push({
+                    name: file.name,
+                    size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+                    url: URL.createObjectURL(file)
+                });
+            });
 
-            trackName.textContent = file.name;
-            fileInfo.textContent = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+            renderPlaylist();
 
-            // Enable Controls
+            // Auto-play newly added file if nothing is currently playing
+            if (currentTrackIndex === -1) {
+                loadTrack(startIndex);
+            }
+        }
+
+        function loadTrack(index) {
+            if (index < 0 || index >= playlist.length) return;
+
+            currentTrackIndex = index;
+            const track = playlist[index];
+            audio.src = track.url;
+            trackName.textContent = track.name;
+
             btnPlay.disabled = false;
-            btnRewind.disabled = false;
-            btnForward.disabled = false;
+            btnPrev.disabled = playlist.length <= 1;
+            btnNext.disabled = playlist.length <= 1;
             seekBar.disabled = false;
 
-            // Auto Play when file is selected
+            renderPlaylist();
+
             if (!isAudioSetup) setupWebAudio();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
             audio.play().then(() => {
                 updatePlayButtonIcon(true);
-            }).catch(e => console.log('Autoplay blocked or waiting for user gesture:', e));
+            }).catch(err => console.log("Audio play postponed for user interaction:", err));
         }
 
-        // File Input & Drag and Drop Events
-        dropZone.addEventListener('click', () => audioInput.click());
-        audioInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        function renderPlaylist() {
+            if (playlist.length === 0) {
+                playlistContainer.innerHTML = '';
+                playlistContainer.appendChild(emptyPlaylistMsg);
+                return;
+            }
+
+            playlistContainer.innerHTML = '';
+            playlist.forEach((track, index) => {
+                const li = document.createElement('li');
+                const isActive = index === currentTrackIndex;
+                li.className = `flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-xs ${
+                    isActive 
+                        ? 'bg-indigo-900/40 text-indigo-200 border border-indigo-500/30' 
+                        : 'bg-slate-950/50 hover:bg-slate-800 text-slate-300 border border-slate-800/50'
+                }`;
+
+                li.innerHTML = `
+                    <div class="flex items-center space-x-2.5 truncate max-w-[80%]">
+                        <i class="fa-solid ${isActive ? 'fa-waveform-lines text-indigo-400 animate-pulse' : 'fa-music text-slate-500'}"></i>
+                        <span class="truncate font-medium">${track.name}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] font-mono text-slate-500">${track.size}</span>
+                        <button class="delete-btn text-slate-500 hover:text-rose-400 p-1" title="Remove track">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+
+                li.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-btn')) {
+                        e.stopPropagation();
+                        removeTrack(index);
+                    } else {
+                        loadTrack(index);
+                    }
+                });
+
+                playlistContainer.appendChild(li);
+            });
+        }
+
+        function removeTrack(index) {
+            playlist.splice(index, 1);
+            if (index === currentTrackIndex) {
+                if (playlist.length > 0) {
+                    loadTrack(index % playlist.length);
+                } else {
+                    audio.pause();
+                    audio.src = '';
+                    currentTrackIndex = -1;
+                    trackName.textContent = "No track selected";
+                    btnPlay.disabled = true;
+                    btnPrev.disabled = true;
+                    btnNext.disabled = true;
+                    seekBar.disabled = true;
+                    updatePlayButtonIcon(false);
+                }
+            } else if (index < currentTrackIndex) {
+                currentTrackIndex--;
+            }
+            renderPlaylist();
+        }
+
+        clearPlaylistBtn.addEventListener('click', () => {
+            playlist = [];
+            audio.pause();
+            audio.src = '';
+            currentTrackIndex = -1;
+            trackName.textContent = "No track selected";
+            btnPlay.disabled = true;
+            btnPrev.disabled = true;
+            btnNext.disabled = true;
+            seekBar.disabled = true;
+            updatePlayButtonIcon(false);
+            renderPlaylist();
         });
+
+        dropZone.addEventListener('click', () => audioInput.click());
+        audioInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('drag-over');
         });
 
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('drag-over');
             if (e.dataTransfer.files.length > 0) {
-                handleFile(e.dataTransfer.files[0]);
+                handleFiles(e.dataTransfer.files);
             }
         });
 
         btnPlay.addEventListener('click', () => {
             if (!isAudioSetup) setupWebAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
             if (audio.paused) {
                 audio.play();
@@ -308,17 +454,24 @@
         });
 
         function updatePlayButtonIcon(isPlaying) {
-            btnPlay.innerHTML = isPlaying ? 
-                '<i class="fa-solid fa-pause"></i>' : 
-                '<i class="fa-solid fa-play ml-0.5"></i>';
+            btnPlay.innerHTML = isPlaying 
+                ? '<i class="fa-solid fa-pause"></i>' 
+                : '<i class="fa-solid fa-play ml-0.5"></i>';
         }
 
-        btnRewind.addEventListener('click', () => {
-            audio.currentTime = Math.max(0, audio.currentTime - 5);
+        btnPrev.addEventListener('click', () => {
+            if (playlist.length > 0) {
+                let prev = currentTrackIndex - 1;
+                if (prev < 0) prev = playlist.length - 1;
+                loadTrack(prev);
+            }
         });
 
-        btnForward.addEventListener('click', () => {
-            audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+        btnNext.addEventListener('click', () => {
+            if (playlist.length > 0) {
+                let next = (currentTrackIndex + 1) % playlist.length;
+                loadTrack(next);
+            }
         });
 
         btnLoop.addEventListener('click', () => {
@@ -346,6 +499,11 @@
             }
         });
 
+        vizModeBtn.addEventListener('click', () => {
+            vizMode = vizMode === 'frequency' ? 'waveform' : 'frequency';
+            vizModeLabel.textContent = vizMode === 'frequency' ? 'Frequency' : 'Waveform';
+        });
+
         // Time updates & Seeking
         audio.addEventListener('timeupdate', () => {
             if (!isNaN(audio.duration)) {
@@ -363,7 +521,13 @@
         });
 
         audio.addEventListener('ended', () => {
-            if (!audio.loop) updatePlayButtonIcon(false);
+            if (!audio.loop) {
+                if (currentTrackIndex < playlist.length - 1) {
+                    loadTrack(currentTrackIndex + 1);
+                } else {
+                    updatePlayButtonIcon(false);
+                }
+            }
         });
 
         function formatTime(seconds) {
@@ -374,34 +538,34 @@
 
         boostSlider.addEventListener('input', (e) => {
             const boostPercent = parseInt(e.target.value, 10);
-            const gainMultiplier = boostPercent / 100;
+            const gainMultiplier = boostPercent / 100; // 100% = 1.0 Gain, 500% = 5.0 Gain
 
-            // Display text update
             boostValue.textContent = `${boostPercent}%`;
+            boostStatus.textContent = `${gainMultiplier.toFixed(1)}x Gain`;
 
-            // Adjust GainNode in Web Audio API (Can go above 1.0 up to 5.0 for 500%)
+            // Adjust GainNode in Web Audio API dynamically
             if (gainNode) {
                 gainNode.gain.value = gainMultiplier;
             }
 
-            // Style state indicator based on boost strength
+            // Styling feedback based on amplification level
             boostSlider.classList.remove('warning', 'danger');
             boostStatus.className = "text-[10px] uppercase font-bold px-2 py-0.5 rounded border";
 
             if (boostPercent <= 100) {
-                boostStatus.textContent = boostPercent === 0 ? "Muted" : "Normal";
                 boostStatus.classList.add('text-emerald-400', 'bg-emerald-950/80', 'border-emerald-800/50');
+                clippingBadge.classList.add('hidden');
             } else if (boostPercent <= 250) {
-                boostStatus.textContent = "Boosted";
                 boostStatus.classList.add('text-indigo-400', 'bg-indigo-950/80', 'border-indigo-800/50');
+                clippingBadge.classList.add('hidden');
             } else if (boostPercent <= 400) {
                 boostSlider.classList.add('warning');
-                boostStatus.textContent = "High Boost";
                 boostStatus.classList.add('text-amber-400', 'bg-amber-950/80', 'border-amber-800/50');
+                clippingBadge.classList.add('hidden');
             } else {
                 boostSlider.classList.add('danger');
-                boostStatus.textContent = "Extreme Overdrive";
                 boostStatus.classList.add('text-rose-400', 'bg-rose-950/80', 'border-rose-800/50');
+                clippingBadge.classList.remove('hidden');
             }
 
             if (isMuted && boostPercent > 0) {
@@ -421,46 +585,72 @@
 
             if (!analyserNode) return;
 
-            const bufferLength = analyserNode.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            analyserNode.getByteFrequencyData(dataArray);
+            const boost = parseInt(boostSlider.value, 10);
 
-            const barWidth = (width / bufferLength) * 2.2;
-            let barHeight;
-            let x = 0;
+            if (vizMode === 'frequency') {
+                const bufferLength = analyserNode.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                analyserNode.getByteFrequencyData(dataArray);
 
-            for (let i = 0; i < bufferLength; i++) {
-                barHeight = (dataArray[i] / 255) * height * 0.85;
+                const barWidth = (width / bufferLength) * 2.5;
+                let x = 0;
 
-                // Color gradient depending on amplification level
-                const boost = parseInt(boostSlider.value, 10);
-                let gradient = canvasCtx.createLinearGradient(0, height, 0, 0);
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = (dataArray[i] / 255) * height * 0.85;
 
-                if (boost > 350) {
-                    gradient.addColorStop(0, '#6366f1');
-                    gradient.addColorStop(0.6, '#f59e0b');
-                    gradient.addColorStop(1, '#ef4444');
-                } else if (boost > 100) {
-                    gradient.addColorStop(0, '#4f46e5');
-                    gradient.addColorStop(0.7, '#818cf8');
-                    gradient.addColorStop(1, '#38bdf8');
-                } else {
-                    gradient.addColorStop(0, '#312e81');
-                    gradient.addColorStop(1, '#6366f1');
+                    let gradient = canvasCtx.createLinearGradient(0, height, 0, 0);
+                    if (boost > 400) {
+                        gradient.addColorStop(0, '#6366f1');
+                        gradient.addColorStop(0.5, '#f59e0b');
+                        gradient.addColorStop(1, '#ef4444');
+                    } else if (boost > 100) {
+                        gradient.addColorStop(0, '#4f46e5');
+                        gradient.addColorStop(0.7, '#818cf8');
+                        gradient.addColorStop(1, '#38bdf8');
+                    } else {
+                        gradient.addColorStop(0, '#312e81');
+                        gradient.addColorStop(1, '#6366f1');
+                    }
+
+                    canvasCtx.fillStyle = gradient;
+                    canvasCtx.beginPath();
+                    canvasCtx.roundRect(x, height - barHeight, barWidth - 2, barHeight, [4, 4, 0, 0]);
+                    canvasCtx.fill();
+
+                    x += barWidth;
+                }
+            } else {
+                // Waveform mode
+                const bufferLength = analyserNode.fftSize;
+                const dataArray = new Uint8Array(bufferLength);
+                analyserNode.getByteTimeDomainData(dataArray);
+
+                canvasCtx.lineWidth = 3 * window.devicePixelRatio;
+                canvasCtx.strokeStyle = boost > 400 ? '#ef4444' : (boost > 100 ? '#818cf8' : '#6366f1');
+                canvasCtx.beginPath();
+
+                const sliceWidth = width / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = (v * height) / 2;
+
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
+
+                    x += sliceWidth;
                 }
 
-                canvasCtx.fillStyle = gradient;
-                
-                // Draw rounded top bars
-                canvasCtx.beginPath();
-                canvasCtx.roundRect(x, height - barHeight, barWidth - 2, barHeight, [4, 4, 0, 0]);
-                canvasCtx.fill();
-
-                x += barWidth;
+                canvasCtx.lineTo(width, height / 2);
+                canvasCtx.stroke();
             }
         }
 
-        // Draw initial static state for aesthetic background before playback
+        // Static visual effect before track selection
         function drawIdleCanvas() {
             canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
             canvasCtx.fillStyle = '#1e293b';
