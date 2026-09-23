@@ -710,6 +710,89 @@
     color: var(--accent-text);
   }
 
+  /* ---------- Equalizer ---------- */
+  .eq-section {
+    padding-top: 4px;
+    border-top: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .eq-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .eq-head span.label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .eq-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .eq-preset-btn {
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+
+  .eq-preset-btn:hover { border-color: var(--silver-dim); color: var(--text); }
+
+  .eq-preset-btn.active {
+    background: #2a1013;
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .eq-band-row {
+    display: grid;
+    grid-template-columns: 42px 1fr 48px;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .eq-band-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .eq-band-value {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eq-slider { height: 4px; }
+
+  .eq-slider::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--silver);
+  }
+
+  .eq-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--silver);
+  }
+
   /* ---------- Footer note ---------- */
   .footnote {
     text-align: center;
@@ -851,6 +934,37 @@
           </div>
         </div>
 
+        <div class="eq-section">
+          <div class="eq-head">
+            <span class="label">Equalizer</span>
+            <div class="eq-presets" id="eq-presets">
+              <button type="button" class="eq-preset-btn active" data-preset="flat">Flat</button>
+              <button type="button" class="eq-preset-btn" data-preset="bass">Bass+</button>
+              <button type="button" class="eq-preset-btn" data-preset="vocal">Vocal</button>
+              <button type="button" class="eq-preset-btn" data-preset="treble">Treble+</button>
+            </div>
+          </div>
+
+          <div class="eq-band-row">
+            <span class="eq-band-label">Bass</span>
+            <input type="range" class="eq-slider" id="bass-slider" min="-12" max="12" value="0" step="1"
+                   aria-label="Bass, decibels" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0">
+            <span class="eq-band-value" id="bass-value">0 dB</span>
+          </div>
+          <div class="eq-band-row">
+            <span class="eq-band-label">Mid</span>
+            <input type="range" class="eq-slider" id="mid-slider" min="-12" max="12" value="0" step="1"
+                   aria-label="Mid, decibels" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0">
+            <span class="eq-band-value" id="mid-value">0 dB</span>
+          </div>
+          <div class="eq-band-row">
+            <span class="eq-band-label">Treble</span>
+            <input type="range" class="eq-slider" id="treble-slider" min="-12" max="12" value="0" step="1"
+                   aria-label="Treble, decibels" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0">
+            <span class="eq-band-value" id="treble-value">0 dB</span>
+          </div>
+        </div>
+
       </div>
 
       <p class="footnote">Boosting above 100% raises gain beyond the source recording and can introduce clipping. Lower the boost if audio sounds distorted.</p>
@@ -876,9 +990,13 @@
   var audioCtx = null;
   var sourceNode = null;
   var gainNode = null;
+  var bassFilter = null;
+  var midFilter = null;
+  var trebleFilter = null;
   var analyserNode = null;
   var freqData = null;
   var audioGraphReady = false;
+  var eqDb = { bass: 0, mid: 0, treble: 0 };
 
   var rafId = null;
   var canvasCtx = null;
@@ -923,6 +1041,14 @@
   var clipBadge = $("clip-badge");
   var clipBadgeText = $("clip-badge-text");
 
+  var bassSlider = $("bass-slider");
+  var midSlider = $("mid-slider");
+  var trebleSlider = $("treble-slider");
+  var bassValueLabel = $("bass-value");
+  var midValueLabel = $("mid-value");
+  var trebleValueLabel = $("treble-value");
+  var eqPresetBtns = document.querySelectorAll(".eq-preset-btn");
+
   var audioEl = $("audio-el");
 
   /* ---------------- Utilities ---------------- */
@@ -947,13 +1073,33 @@
 
     sourceNode = audioCtx.createMediaElementSource(audioEl);
     gainNode = audioCtx.createGain();
+
+    bassFilter = audioCtx.createBiquadFilter();
+    bassFilter.type = "lowshelf";
+    bassFilter.frequency.value = 200;
+    bassFilter.gain.value = eqDb.bass;
+
+    midFilter = audioCtx.createBiquadFilter();
+    midFilter.type = "peaking";
+    midFilter.frequency.value = 1000;
+    midFilter.Q.value = 1;
+    midFilter.gain.value = eqDb.mid;
+
+    trebleFilter = audioCtx.createBiquadFilter();
+    trebleFilter.type = "highshelf";
+    trebleFilter.frequency.value = 3200;
+    trebleFilter.gain.value = eqDb.treble;
+
     analyserNode = audioCtx.createAnalyser();
     analyserNode.fftSize = 256;
     analyserNode.smoothingTimeConstant = 0.82;
     freqData = new Uint8Array(analyserNode.frequencyBinCount);
 
     sourceNode.connect(gainNode);
-    gainNode.connect(analyserNode);
+    gainNode.connect(bassFilter);
+    bassFilter.connect(midFilter);
+    midFilter.connect(trebleFilter);
+    trebleFilter.connect(analyserNode);
     analyserNode.connect(audioCtx.destination);
 
     gainNode.gain.value = sliderToGain(parseFloat(gainSlider.value));
@@ -1319,6 +1465,81 @@
     setMuted(!isMuted);
   });
 
+  /* ---------------- Equalizer ---------------- */
+  var eqPresets = {
+    flat:   { bass: 0,  mid: 0, treble: 0  },
+    bass:   { bass: 8,  mid: -1, treble: -1 },
+    vocal:  { bass: -3, mid: 5,  treble: 2  },
+    treble: { bass: -2, mid: 0,  treble: 8  }
+  };
+
+  function formatDb(v) {
+    return (v > 0 ? "+" : "") + v + " dB";
+  }
+
+  function applyBandValue(band, value) {
+    eqDb[band] = value;
+    if (band === "bass") {
+      bassValueLabel.textContent = formatDb(value);
+      bassSlider.setAttribute("aria-valuenow", String(value));
+      if (bassFilter) bassFilter.gain.value = value;
+    } else if (band === "mid") {
+      midValueLabel.textContent = formatDb(value);
+      midSlider.setAttribute("aria-valuenow", String(value));
+      if (midFilter) midFilter.gain.value = value;
+    } else {
+      trebleValueLabel.textContent = formatDb(value);
+      trebleSlider.setAttribute("aria-valuenow", String(value));
+      if (trebleFilter) trebleFilter.gain.value = value;
+    }
+  }
+
+  function syncEqUIFromState() {
+    bassSlider.value = eqDb.bass;
+    midSlider.value = eqDb.mid;
+    trebleSlider.value = eqDb.treble;
+    applyBandValue("bass", eqDb.bass);
+    applyBandValue("mid", eqDb.mid);
+    applyBandValue("treble", eqDb.treble);
+  }
+
+  function matchingPreset() {
+    for (var name in eqPresets) {
+      var p = eqPresets[name];
+      if (p.bass === eqDb.bass && p.mid === eqDb.mid && p.treble === eqDb.treble) return name;
+    }
+    return null;
+  }
+
+  function updatePresetHighlight() {
+    var active = matchingPreset();
+    eqPresetBtns.forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-preset") === active);
+    });
+  }
+
+  function handleBandInput(band, slider) {
+    if (!audioGraphReady) ensureAudioGraph();
+    applyBandValue(band, parseFloat(slider.value));
+    updatePresetHighlight();
+  }
+
+  bassSlider.addEventListener("input", function () { handleBandInput("bass", bassSlider); });
+  midSlider.addEventListener("input", function () { handleBandInput("mid", midSlider); });
+  trebleSlider.addEventListener("input", function () { handleBandInput("treble", trebleSlider); });
+
+  eqPresetBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (!audioGraphReady) ensureAudioGraph();
+      var preset = eqPresets[btn.getAttribute("data-preset")];
+      eqDb.bass = preset.bass;
+      eqDb.mid = preset.mid;
+      eqDb.treble = preset.treble;
+      syncEqUIFromState();
+      updatePresetHighlight();
+    });
+  });
+
   /* ---------------- Transport buttons ---------------- */
   playBtn.addEventListener("click", togglePlay);
   nextBtn.addEventListener("click", goToNext);
@@ -1450,6 +1671,7 @@
   function init() {
     setupCanvas();
     updateGainUI();
+    syncEqUIFromState();
     updateTransportEnabled();
     renderLoop();
   }
